@@ -2,6 +2,6 @@
   "format": "uma-licence-revocations",
   "version": 1,
   "kid": "7ADB9375",
-  "payload": "eyJpc3N1ZWRfYXQiOiIyMDI2LTEwLTIxVDA4OjQwOjQ0WiIsImtpZCI6IjdBREI5Mzc1IiwicmV2b2tlZCI6W10sInNlcXVlbmNlIjoxfQ==",
-  "signature": "JZU0y+g/LqJYE9cBTlHaZ+UrnQx3zhCcnKpFfs0MP7sSMHa9xg9eGD4NkOtCLFbT7JYFvq0DNzswPUPceU+pCg=="
+  "payload": "eyJpc3N1ZWRfYXQiOiIyMDI2LTEwLTIyVDA2OjAyOjQ0WiIsImtpZCI6IjdBREI5Mzc1IiwicmV2b2tlZCI6W3siZGF0ZSI6IjIwMjYtMTAtMjIiLCJpZCI6IkM2MzYtMDc2RC1BMzI2LTFFOEYifV0sInNlcXVlbmNlIjoyfQ==",
+  "signature": "HKMGtUKn/huk1+NPqAji3exIjM3dzw8qoq6LXrvSJnxLyMLLMC9IF/f+WASaEycSzWGefP8GmhWlzJkfRnOvAA=="
 }
