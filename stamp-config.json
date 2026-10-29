@@ -1,0 +1,13 @@
+{
+  "format": "uma-licence-revocation-stamp-config",
+  "version": 1,
+  "owner_public_key": "gud8Yi3lODdZvmZNGAVVYzBE5NbRdyuaGcaZFcvxqVs=",
+  "owner_key_id": "7ADB9375",
+  "stamp_public_key": "sNZ8zvXGcj25PF3CTGqnlCPadmiIyD1n0PFbbyJj4SA=",
+  "stamp_key_id": "98E7B2B8",
+  "stamp_key_pin": "1a59ac444304ad5eba1fb1b64ad05c00964d35f65595954a37baa6f006cfa7a0",
+  "list_file": "revocations.json",
+  "stamped_file": "revocations-v2.json",
+  "created": "2026-10-29T12:23:27Z",
+  "note": "PUBLIC keys only. The stamp key's private half is only the Actions secret REVOCATION_STAMP_KEY."
+}

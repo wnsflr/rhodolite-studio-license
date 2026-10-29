@@ -1,0 +1,96 @@
+# Copyright (c) 2026 Jun Shik Kim. All rights reserved.
+#
+# Daily stamp of the Rhodolite Studio revocation list (SPEC §34.17). Lives in the public licence repository
+# wnsflr/rhodolite-studio-license, next to revocations.json.
+#
+# * revocations.json is published by the OWNER (Owner Tool "publish", signed with the owner key on the owner's laptop).
+#   Every app version reads it. This workflow never changes it.
+# * Every day this workflow checks the owner's signature on revocations.json and writes revocations-v2.json: the same
+#   list plus a timestamp ("stamp") signed with a separate, revocation-only key. Its private half exists only as the
+#   Actions secret REVOCATION_STAMP_KEY; the owner key is never used here. A stamp cannot add or remove revoked
+#   licences; it only shows the list is current. Rhodolite Studio 0.5.1+ needs a list signed less than 30 days ago.
+# * Also runs when a new revocations.json is pushed (so a revocation is stamped within minutes), and by hand (Actions
+#   tab -> Run workflow; tick "dry run" to check everything without committing). Pushing this workflow, the tool or
+#   stamp-config.json starts nothing by itself: the first run is a manual dry run (REVOCATION_SETUP.md).
+# * Free: GitHub Actions minutes are free for public repositories. GitHub disables scheduled workflows in a public
+#   repository after 60 days without activity; the daily commit of revocations-v2.json is that activity.
+name: stamp-revocations
+
+on:
+  schedule:
+    - cron: "23 4 * * *"   # daily, 04:23 UTC (off the full hour, when GitHub's scheduler is busiest)
+  push:
+    branches: [main]
+    paths:
+      - revocations.json
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: check and sign, but write and commit nothing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # commit revocations-v2.json; nothing else
+
+concurrency:
+  group: stamp-revocations
+  cancel-in-progress: false
+
+jobs:
+  stamp:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Python with cryptography
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the one dependency (pinned)
+        run: |
+          python -m pip install --disable-pip-version-check --no-input --only-binary=:all: "cryptography==46.0.5"
+
+      - name: Self-test (throw-away keys)
+        run: python tools/revocation_stamp.py selftest
+
+      - name: Stamp (dry run)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        env:
+          REVOCATION_STAMP_KEY: ${{ secrets.REVOCATION_STAMP_KEY }}
+        run: >-
+          python tools/revocation_stamp.py stamp --config stamp-config.json --list revocations.json
+          --out revocations-v2.json --dry-run
+
+      - name: Stamp
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        env:
+          REVOCATION_STAMP_KEY: ${{ secrets.REVOCATION_STAMP_KEY }}
+        run: |
+          python tools/revocation_stamp.py stamp --config stamp-config.json --list revocations.json --out revocations-v2.json
+          python tools/revocation_stamp.py verify --config stamp-config.json --file revocations-v2.json --list revocations.json --max-age-days 1
+
+      - name: Commit revocations-v2.json
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add revocations-v2.json
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+            exit 0
+          fi
+          git commit -m "Stamp the revocation list ($(date -u +%Y-%m-%dT%H:%MZ))"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            # someone pushed in between (e.g. a new revocations.json): stamp on top of it next run; retry the push
+            git pull --rebase origin main || { git rebase --abort; exit 1; }
+          done
+          exit 1
