@@ -7,7 +7,8 @@ owner's laptop; every app version reads it). This tool only adds a fresh, signed
 signature, then writes ``revocations-v2.json`` = the owner's list unchanged + a *stamp* signed with a separate,
 revocation-only Ed25519 key whose private half exists only as the Actions secret ``REVOCATION_STAMP_KEY``. A stamp can
 never add or remove a revoked id: the app takes the ids from the owner's signature and the stamp only proves that this
-exact list was current on that day. Rhodolite Studio 0.5.1+ needs a list signed less than 30 days ago.
+exact list was current on that day. Rhodolite Studio 0.5.1+ reads it; a stamp older than 30 days only shows the user
+a soft note (the 30-day offline grace is the app's only lock).
 
 Commands (Python 3.10+ and the ``cryptography`` package; nothing else, no network):
 
@@ -19,6 +20,7 @@ Commands (Python 3.10+ and the ``cryptography`` package; nothing else, no networ
     revocation_stamp.py stamp --config stamp-config.json --list revocations.json --out revocations-v2.json [--dry-run]
         The private key comes from the environment variable REVOCATION_STAMP_KEY and must match the config's public
         key. --dry-run checks and signs everything but writes nothing (without the variable: with a throw-away key).
+        A list dated more than an hour after this machine's clock is refused (the signing laptop's clock was ahead).
     revocation_stamp.py verify --config stamp-config.json --file revocations-v2.json [--max-age-days 3]
     revocation_stamp.py selftest
         Throw-away keys only: stamp, verify, and refuse a forged list, a foreign key and a moved stamp.
@@ -54,8 +56,9 @@ STAMP_DOMAIN = b"uma-licence-revocation-stamp/v1\0"
 KID_DOMAIN = b"uma-licence-kid\0"
 ENV_KEY = "REVOCATION_STAMP_KEY"
 MAX_LIST_BYTES = 1 << 20
-#: the app's limit (``revocation.FRESH_DAYS``): a list signed longer ago no longer counts
-APP_FRESH_DAYS = 30
+#: an owner's list dated later than this ahead of the runner's clock is refused: the laptop that signed it had its clock
+#: ahead, and the failed run e-mails the owner before any app sees the list
+MAX_ISSUED_AHEAD = timedelta(hours=1)
 
 
 class StampError(Exception):
@@ -335,6 +338,13 @@ def cmd_stamp(args: argparse.Namespace) -> int:
     except OSError as exc:
         raise StampError(f"cannot read the owner's list {args.list} ({exc})") from None
     list_doc, body, payload = verify_owner_list(raw, cfg["owner"])
+    try:  # the list stamped so far (none, or one under an earlier stamp key: nothing to compare with)
+        previous = verify_stamped(Path(args.out).read_bytes(), cfg["owner"], cfg["stamp"])["sequence"]
+    except (OSError, StampError):
+        previous = None
+    if previous is not None and body["sequence"] < previous:
+        raise StampError(f"the owner's list is #{body['sequence']}, but {args.out} already stamps #{previous}: apps never "
+                         "go back to a lower list number. Upload the newest revocations.json (keytool.py publish).")
     seed = os.environ.get(ENV_KEY, "")
     throwaway = False
     if seed.strip():
@@ -351,10 +361,14 @@ def cmd_stamp(args: argparse.Namespace) -> int:
     now = parse_iso(args.now) if args.now else datetime.now(timezone.utc)
     if now is None:
         raise StampError("--now must be an ISO time")
+    issued = parse_iso(body["issued_at"])
+    if issued is not None and issued - now > MAX_ISSUED_AHEAD:
+        raise StampError(f"the owner's list #{body['sequence']} is dated {body['issued_at']}, later than this runner's "
+                         f"clock ({iso_utc(now)}): the clock of the PC that signed it was ahead. Set that PC's date and "
+                         "time correctly and publish again (keytool.py publish); nothing was stamped.")
     doc = make_stamp(list_doc, body, payload, sk, now)
     text = stamped_text(doc)
     check = verify_stamped(text, cfg["owner"], public_bytes(sk))
-    issued = parse_iso(body["issued_at"])
     summary = (f"list #{body['sequence']} ({check['revoked']} revoked, issued {body['issued_at']}) stamped "
                f"{iso_utc(now)} with key {key_id(public_bytes(sk))}")
     if args.dry_run:

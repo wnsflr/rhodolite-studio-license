@@ -1,0 +1,13 @@
+# Copyright (c) 2026 Jun Shik Kim. All rights reserved.
+#
+# The stamp workflow's only dependency (cryptography) and what it pulls in, pinned by SHA-256
+# (pip install --require-hashes --no-deps --only-binary=:all: -r tools/stamp-requirements.txt). These are the wheels
+# pip picks on GitHub's ubuntu-24.04 runner for Python 3.12 (x86_64), checked against PyPI on 2026-10-30; a file whose
+# hash is not listed here is refused, so the job fails instead of running other code next to REVOCATION_STAMP_KEY.
+cryptography==46.0.5 \
+    --hash=sha256:4c3341037c136030cb46e4b1e17b7418ea4cbd9dd207e4a6f3b2b24e0d4ac731 \
+    --hash=sha256:3ee190460e2fbe447175cda91b88b84ae8322a104fc27766ad09428754a618ed
+cffi==2.1.1 \
+    --hash=sha256:c1453022f490d2459a11819d83ad1d586e9ff65a12ac3e705ffebd46d3685dcf
+pycparser==3.12 \
+    --hash=sha256:a076f3f489b39b43ed13563a1dafe42447445bec2e294154ec5c57fcdda4c85e

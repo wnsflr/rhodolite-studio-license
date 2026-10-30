@@ -8,7 +8,8 @@
 # * Every day this workflow checks the owner's signature on revocations.json and writes revocations-v2.json: the same
 #   list plus a timestamp ("stamp") signed with a separate, revocation-only key. Its private half exists only as the
 #   Actions secret REVOCATION_STAMP_KEY; the owner key is never used here. A stamp cannot add or remove revoked
-#   licences; it only shows the list is current. Rhodolite Studio 0.5.1+ needs a list signed less than 30 days ago.
+#   licences; it only shows the list is current. Rhodolite Studio 0.5.1+ reads it; a stamp older than 30 days only shows
+#   a soft note in the app (the 30-day offline grace is its only lock). It never stamps a list older than the stamped one.
 # * Also runs when a new revocations.json is pushed (so a revocation is stamped within minutes), and by hand (Actions
 #   tab -> Run workflow; tick "dry run" to check everything without committing). Pushing this workflow, the tool or
 #   stamp-config.json starts nothing by itself: the first run is a manual dry run (REVOCATION_SETUP.md).
@@ -42,19 +43,23 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
+      # Every action is pinned to a full commit SHA (the tag it was on is in the comment): a moved or compromised tag
+      # can never run other code in this job, which holds REVOCATION_STAMP_KEY. To update one, look up the new tag's
+      # commit (git ls-remote https://github.com/actions/checkout refs/tags/vX.Y.Z) and replace the SHA and comment.
       - name: Check out
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         with:
+          ref: main        # the newest main: a push run queued behind another run stamps the latest list, not its own
           fetch-depth: 1
 
       - name: Python with cryptography
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:
           python-version: "3.12"
 
-      - name: Install the one dependency (pinned)
+      - name: Install the one dependency (pinned by hash)
         run: |
-          python -m pip install --disable-pip-version-check --no-input --only-binary=:all: "cryptography==46.0.5"
+          python -m pip install --disable-pip-version-check --no-input --only-binary=:all: --no-deps --require-hashes -r tools/stamp-requirements.txt
 
       - name: Self-test (throw-away keys)
         run: python tools/revocation_stamp.py selftest
@@ -90,7 +95,8 @@ jobs:
             if git push origin HEAD:main; then
               exit 0
             fi
-            # someone pushed in between (e.g. a new revocations.json): stamp on top of it next run; retry the push
+            # someone pushed in between (e.g. a new revocations.json, whose own push run is queued behind this one and
+            # checks out the newest main, so it stamps that list next): put this stamp on top and retry the push
             git pull --rebase origin main || { git rebase --abort; exit 1; }
           done
           exit 1
