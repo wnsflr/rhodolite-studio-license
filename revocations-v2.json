@@ -10,7 +10,7 @@
   },
   "stamp": {
     "kid": "98E7B2B8",
-    "payload": "eyJraWQiOiI5OEU3QjJCOCIsImxpc3Rfa2lkIjoiN0FEQjkzNzUiLCJsaXN0X3NlcXVlbmNlIjoyLCJsaXN0X3NoYTI1NiI6ImE5ODBiMDA3N2E0ZmFjNzlkNzVkNGJmOTU5OGUxNTc4ZjA0MjI5MDc2MzA2NzU0N2MyYzczNjQ3Y2IzODNjYjUiLCJzdGFtcGVkX2F0IjoiMjAyNi0xMS0yMVQxMjo0OTozNVoifQ==",
-    "signature": "fp6+mhXQk3yMCbf5wdrp/BDw+vh6lo6tJ6Yy1Ccs9A4TjtliC79FR5jjfeKmW+cUGDdZOo+707RBgPbESOmQDg=="
+    "payload": "eyJraWQiOiI5OEU3QjJCOCIsImxpc3Rfa2lkIjoiN0FEQjkzNzUiLCJsaXN0X3NlcXVlbmNlIjoyLCJsaXN0X3NoYTI1NiI6ImE5ODBiMDA3N2E0ZmFjNzlkNzVkNGJmOTU5OGUxNTc4ZjA0MjI5MDc2MzA2NzU0N2MyYzczNjQ3Y2IzODNjYjUiLCJzdGFtcGVkX2F0IjoiMjAyNi0xMS0yMlQxMjo0Mjo1MloifQ==",
+    "signature": "v7mCJx94q3KLajCux5kyLhASFK9WHNZ0Zxb5t201RB2lswNdxzKZPvAQog+bwfE6IjGd+jAnKgA1lMOftWrkDw=="
   }
 }
